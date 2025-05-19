@@ -12,6 +12,7 @@ type Brand struct {
 	Logo       string    `gorm:"not null"`
 	WebsiteURL string    `gorm:"not null"`
 	Mission    string    `gorm:"not null"`
+	Posts      []Post    `gorm:"foreignKey:BrandID"`
 	CreatedAt  time.Time `gorm:"autoCreateTime"`
 	UpdatedAt  time.Time `gorm:"autoUpdateTime"`
 }
