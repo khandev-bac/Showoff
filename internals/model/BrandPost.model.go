@@ -14,6 +14,7 @@ type Post struct {
 	ProductLink string    `gorm:"not null"`
 	Caption     string
 	Images      []PostImage `gorm:"foreignKey:PostID"`
+	LikeCount   int         `gorm:"default:0"`
 	CreatedAt   time.Time   `gorm:"autoCreateTime"`
 }
 type PostImage struct {
