@@ -15,6 +15,8 @@ type Post struct {
 	Caption     string
 	Images      []PostImage `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE"`
 	LikeCount   int         `gorm:"default:0"`
+	Likes       []Like      `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE"`
+	WishLists   []WishList  `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE"`
 	CreatedAt   time.Time   `gorm:"autoCreateTime"`
 }
 type PostImage struct {
