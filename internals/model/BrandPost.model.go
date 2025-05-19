@@ -13,13 +13,13 @@ type Post struct {
 	ProductName string    `gorm:"not null"`
 	ProductLink string    `gorm:"not null"`
 	Caption     string
-	Images      []PostImage `gorm:"foreignKey:PostID"`
+	Images      []PostImage `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE"`
 	LikeCount   int         `gorm:"default:0"`
 	CreatedAt   time.Time   `gorm:"autoCreateTime"`
 }
 type PostImage struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	PostID    uuid.UUID `gorm:"type:uuid;not null"`
+	PostID    uuid.UUID `gorm:"type:uuid;not null;index"`
 	Post      Post      `gorm:"foreignKey:PostID"`
 	ImageURL  string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
