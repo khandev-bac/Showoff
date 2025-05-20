@@ -3,6 +3,7 @@ package main
 import (
 	"exceapp/cmd/config"
 	"exceapp/internals/handler"
+	"exceapp/internals/model"
 	"exceapp/internals/repo"
 	"exceapp/internals/router"
 	"exceapp/internals/service"
@@ -17,6 +18,10 @@ import (
 func main() {
 	config.ConnectDB()
 	db := config.DB
+	err := db.AutoMigrate(&model.User{})
+	if err != nil {
+		panic("❌ AutoMigrate failed: " + err.Error())
+	}
 	UserRepo := *repo.NewUserRepo(db)
 	UserService := *service.NewUserService(&UserRepo)
 	UserHandler := *handler.NewUserHandler(&UserService)
