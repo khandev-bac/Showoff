@@ -30,17 +30,13 @@ func (s *UserService) Signup(ctx context.Context, user *model.User) error {
 	if err != nil {
 		return err
 	}
-	token, err := jwt.GenerateJWTToken(user.ID)
-	if err != nil {
-		return err
-	}
+
 	newUser := &model.User{
-		ID:           uuid.New(),
-		Name:         user.Name,
-		Email:        user.Email,
-		Password:     string(hasedPass),
-		RefreshToken: token.RefreshToken,
-		CreatedAt:    time.Now(),
+		ID:        uuid.New(),
+		Name:      user.Name,
+		Email:     user.Email,
+		Password:  string(hasedPass),
+		CreatedAt: time.Now(),
 	}
 	return s.repo.CreateUser(ctx, newUser)
 }

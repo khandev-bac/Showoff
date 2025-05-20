@@ -22,6 +22,17 @@ func NewUserHandler(service *service.UserService) *UserHandler {
 	}
 }
 
+func (h *UserHandler) Signup(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name     string `json:"user_name"`
+		Email    string `json:"user_email"`
+		Password string `json:"-"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Unable to take your request", http.StatusBadRequest)
+	}
+}
+
 func (h *UserHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	state := uuid.New().String()
 	url := google.GetLoginUrl(state)
