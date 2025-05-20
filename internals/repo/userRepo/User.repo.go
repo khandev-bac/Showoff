@@ -2,6 +2,7 @@ package userrepo
 
 import (
 	"context"
+	"errors"
 	"exceapp/internals/model"
 
 	"github.com/google/uuid"
@@ -35,6 +36,9 @@ func (r *UserRepo) GetUserByID(ctx context.Context, userID uuid.UUID) (*model.Us
 func (r *UserRepo) GetByGoogleID(ctx context.Context, googleID uuid.UUID) (*model.User, error) {
 	var user model.User
 	err := r.db.WithContext(ctx).Where("google_id = ?", googleID).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
 	return &user, err
 }
 func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
