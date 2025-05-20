@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -38,4 +39,18 @@ func GenerateJWTToken(userID uuid.UUID) (*TokenPair, error) {
 		AccessToken:  AccesToken,
 		RefreshToken: RefreshToken,
 	}, nil
+}
+
+func ValidateToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		return jwt_key, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("cannot parse JWT claims")
+	}
+	return claims, nil
 }
