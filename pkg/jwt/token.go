@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var jwt_key = os.Getenv("JWT_KEY")
+var jwt_key = []byte(os.Getenv("JWT_KEY"))
 
 type TokenPair struct {
 	AccessToken  string
