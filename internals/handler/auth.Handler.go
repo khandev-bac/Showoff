@@ -24,6 +24,9 @@ func NewUserHandler(service *service.UserService) *UserHandler {
 		service: service,
 	}
 }
+func (h *UserHandler) Check(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("ok"))
+}
 
 func (h *UserHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -64,7 +67,7 @@ func (h *UserHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
-		Expires:  time.Now().Add(3 * 30 * 24 * time.Minute),
+		Expires:  time.Now().Add(3 * 30 * 24 * time.Hour),
 		SameSite: http.SameSiteLaxMode,
 	})
 	response := map[string]interface{}{
@@ -117,7 +120,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
-		Expires:  time.Now().Add(3 * 30 * 24 * time.Minute),
+		Expires:  time.Now().Add(3 * 30 * 24 * time.Hour),
 		SameSite: http.SameSiteLaxMode,
 	})
 	w.Header().Set("Content-Type", "application/json")
