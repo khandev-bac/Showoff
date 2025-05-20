@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"exceapp/internals/model"
 	"exceapp/internals/service"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/google/uuid"
 )
+
+var ctx = context.Background()
 
 type UserHandler struct {
 	service *service.UserService
@@ -26,11 +29,103 @@ func (h *UserHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name     string `json:"user_name"`
 		Email    string `json:"user_email"`
-		Password string `json:"-"`
+		Password string `json:"user_password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Unable to take your request", http.StatusBadRequest)
+		return
 	}
+	user := &model.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+	}
+	tokens, err := jwt.GenerateJWTToken(user.ID)
+	if err != nil {
+		http.Error(w, "failed to generate token", http.StatusInternalServerError)
+		return
+	}
+	if err := h.service.UpdateRefreshToken(ctx, user.ID, tokens.RefreshToken); err != nil {
+		http.Error(w, "Failed to update token", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    tokens.AccessToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(15 * time.Minute),
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(3 * 30 * 24 * time.Minute),
+		SameSite: http.SameSiteLaxMode,
+	})
+	response := map[string]interface{}{
+		"user_id":       user.ID,
+		"user_name":     user.Name,
+		"user_email":    user.Email,
+		"token":         tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email    string `json:"user_email"`
+		Password string `json:"user_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Failed to process request", http.StatusBadRequest)
+		return
+	}
+	user, err := h.service.Login(ctx, req.Email, req.Password)
+	if err != nil {
+		http.Error(w, "invalid email or password", http.StatusBadRequest)
+		return
+	}
+	tokens, err := jwt.GenerateJWTToken(user.ID)
+	if err != nil {
+		http.Error(w, "failed to generate token", http.StatusInternalServerError)
+		return
+	}
+	if err := h.service.UpdateRefreshToken(ctx, user.ID, tokens.RefreshToken); err != nil {
+		http.Error(w, "Failed to update token", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    tokens.AccessToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(15 * time.Minute),
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(3 * 30 * 24 * time.Minute),
+		SameSite: http.SameSiteLaxMode,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user_id": user.ID,
+		"message": "Login successfull 🎉",
+	})
 }
 
 func (h *UserHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
