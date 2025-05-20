@@ -1,4 +1,4 @@
-package userrepo
+package repo
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func (r *UserRepo) GetUserByID(ctx context.Context, userID uuid.UUID) (*model.Us
 	err := r.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error
 	return &user, err
 }
-func (r *UserRepo) GetByGoogleID(ctx context.Context, googleID uuid.UUID) (*model.User, error) {
+func (r *UserRepo) GetByGoogleID(ctx context.Context, googleID string) (*model.User, error) {
 	var user model.User
 	err := r.db.WithContext(ctx).Where("google_id = ?", googleID).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
