@@ -53,7 +53,7 @@ func (r *UserRepo) UpdateUser(ctx context.Context, userID uuid.UUID, name string
 	}).Error
 }
 func (r *UserRepo) DeleteAccount(ctx context.Context, userID uuid.UUID) error {
-	return r.db.WithContext(ctx).Delete(&model.User{}).Where("id = ?", userID).Error
+	return r.db.WithContext(ctx).Where("id = ?", userID).Delete(&model.User{}).Error
 }
 func (r *UserRepo) UpdateRefreshToken(ctx context.Context, userID uuid.UUID, refreshToken string) error {
 	return r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("refresh_token", refreshToken).Error
