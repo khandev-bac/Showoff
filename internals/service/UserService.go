@@ -5,8 +5,6 @@ import (
 	"errors"
 	"exceapp/internals/model"
 	"exceapp/internals/repo"
-	"exceapp/pkg/jwt"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -21,59 +19,54 @@ func NewUserService(repo *repo.UserRepo) *UserService {
 		repo: repo,
 	}
 }
-func (s *UserService) Signup(ctx context.Context, user *model.User) error {
-	exist, _ := s.repo.GetUserByEmail(ctx, user.Email)
-	if exist != nil {
-		return errors.New("user already exists")
-	}
-	hasedPass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+
+func (s *UserService) Signup(ctx context.Context, user *model.User) (*model.User, error) {
+	exist, err := s.repo.FindByEmail(ctx, user.Email)
 	if err != nil {
-		return err
+		return nil, errors.New("internal error while checking user")
+	}
+	if exist != nil {
+		return nil, errors.New("user already exists")
+	}
+
+	hashedPass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, errors.New("failed to hash password")
 	}
 
 	newUser := &model.User{
-		ID:        uuid.New(),
-		Name:      user.Name,
-		Email:     user.Email,
-		Password:  string(hasedPass),
-		CreatedAt: time.Now(),
+		ID:       uuid.New(),
+		Name:     user.Name,
+		Email:    user.Email,
+		Password: string(hashedPass),
 	}
-	return s.repo.CreateUser(ctx, newUser)
+
+	return s.repo.Signup(ctx, newUser)
 }
+
 func (s *UserService) Login(ctx context.Context, email, password string) (*model.User, error) {
-	user, err := s.repo.GetUserByEmail(ctx, email)
+	user, err := s.repo.FindByEmail(ctx, email)
 	if err != nil || user == nil {
-		return nil, errors.New("invalid credentials")
+		return nil, errors.New("invalid email or password")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return nil, err
-	}
-	token, err := jwt.GenerateJWTToken(user.ID)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.repo.UpdateRefreshToken(ctx, user.ID, token.RefreshToken); err != nil {
-		return nil, err
+		return nil, errors.New("invalid email or password")
 	}
 	return user, nil
-
-}
-func (s *UserService) FindByID(ctx context.Context, userID uuid.UUID) (*model.User, error) {
-	return s.repo.GetUserByID(ctx, userID)
-}
-func (s *UserService) FindByEmail(ctx context.Context, email string) (*model.User, error) {
-	return s.repo.GetUserByEmail(ctx, email)
-}
-func (s *UserService) FindByGoogleID(ctx context.Context, userID string) (*model.User, error) {
-	return s.repo.GetByGoogleID(ctx, userID)
-}
-func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, name, profilePic string) error {
-	return s.repo.UpdateUser(ctx, userID, name, profilePic)
-}
-func (s *UserService) DeleteAccount(ctx context.Context, userID uuid.UUID) error {
-	return s.repo.DeleteAccount(ctx, userID)
 }
 
+func (s *UserService) UpdateUser(ctx context.Context, user *model.User) error {
+	return s.repo.UpdateUser(ctx, user)
+}
 func (s *UserService) UpdateRefreshToken(ctx context.Context, userID uuid.UUID, refreshToken string) error {
 	return s.repo.UpdateRefreshToken(ctx, userID, refreshToken)
+}
+func (s *UserService) FindByEmail(ctx context.Context, email string) (*model.User, error) {
+	return s.repo.FindByEmail(ctx, email)
+}
+func (s *UserService) FindById(ctx context.Context, userID uuid.UUID) (*model.User, error) {
+	return s.repo.FindById(ctx, userID)
+}
+func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	return s.repo.DeleteUser(ctx, userID)
 }
