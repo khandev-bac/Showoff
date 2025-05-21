@@ -185,9 +185,8 @@ func (h *UserHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	if user == nil {
 		user, err = h.service.Signup(ctx, &model.User{
-			Name:       userInfo.Name,
-			Email:      userInfo.Email,
-			ProfilePic: userInfo.ProfilePic,
+			Name:  userInfo.Name,
+			Email: userInfo.Email,
 		})
 		if err != nil {
 			http.Error(w, "User creation failed", http.StatusInternalServerError)
@@ -326,7 +325,7 @@ func (h *UserHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		"profile": user.ProfilePic,
 	})
 }
-func (h *UserHandler) RefreshTokenhandler(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil {
 		http.Error(w, "Refresh token missing", http.StatusUnauthorized)
@@ -348,20 +347,23 @@ func (h *UserHandler) RefreshTokenhandler(w http.ResponseWriter, r *http.Request
 		http.Error(w, "Invalid UUID in token claims", http.StatusUnauthorized)
 		return
 	}
-	token, err := jwt.GenerateJWTToken(userID)
+
+	tokens, err := jwt.GenerateJWTToken(userID)
 	if err != nil {
 		http.Error(w, "Could not generate new access token", http.StatusInternalServerError)
 		return
 	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
-		Value:    token.RefreshToken,
+		Value:    tokens.AccessToken, // FIXED: was incorrectly using RefreshToken
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 		Secure:   true,
 		Path:     "/",
 		Expires:  time.Now().Add(15 * time.Minute),
 	})
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Access token refreshed"))
 }

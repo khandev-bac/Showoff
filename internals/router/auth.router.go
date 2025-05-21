@@ -28,12 +28,12 @@ func Auth() http.Handler {
 	r.Get("/ok", handler.Check)
 	r.Get("/google-login", handler.GoogleLogin)
 	r.Get("/google-callback", handler.GoogleCallback)
+	r.Get("/refreshToken", handler.RefreshTokenHandler)
 
 	r.Group(func(protected chi.Router) {
 		protected.Use(middleware.Auth)
 		protected.Get("/logout", handler.Logout)
 		protected.Get("/user", handler.GetUserInfo)
-		protected.Get("/refreshToken", handler.RefreshTokenhandler)
 	})
 	return r
 }
