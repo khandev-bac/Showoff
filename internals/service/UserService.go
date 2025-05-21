@@ -70,3 +70,6 @@ func (s *UserService) FindById(ctx context.Context, userID uuid.UUID) (*model.Us
 func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return s.repo.DeleteUser(ctx, userID)
 }
+func (s *UserService) GetUsersFeed(ctx context.Context, limit, offset int, excludeUserID uuid.UUID) ([]model.User, error) {
+	return s.repo.FindAllUsers(ctx, limit, offset, excludeUserID)
+}
