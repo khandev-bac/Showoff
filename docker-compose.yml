@@ -1,7 +1,7 @@
 services:
-
   db:
     image: postgres
+    container_name: postgres-db
     ports:
       - "5432:5432"
     environment:
@@ -10,9 +10,11 @@ services:
       POSTGRES_DB: showoff
     volumes:
       - pgdata:/var/lib/postgresql/data
-    restart: unless-stopped  
+    restart: unless-stopped
+
   app:
     build: .
+    container_name: go-app
     ports:
       - "8000:8000"
     depends_on:
@@ -25,7 +27,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: showoff
-    restart: unless-stopped    
- 
+    restart: unless-stopped
+
 volumes:
   pgdata:
+    name: pgdata

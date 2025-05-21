@@ -52,3 +52,15 @@ func (r *UserRepo) UpdateRefreshToken(ctx context.Context, userID uuid.UUID, ref
 func (r *UserRepo) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ? ", userID).Delete(&model.User{}).Error
 }
+func (r *UserRepo) FindAllUsers(ctx context.Context, limit, offset int, excludeUserID uuid.UUID) ([]model.User, error) {
+	var users []model.User
+	err := r.db.WithContext(ctx).
+		Where("id != ?", excludeUserID). // exclude current user
+		Limit(limit).
+		Offset(offset).
+		Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}

@@ -33,6 +33,7 @@ func Auth() http.Handler {
 		protected.Use(middleware.Auth)
 		protected.Get("/logout", handler.Logout)
 		protected.Get("/user", handler.GetUserInfo)
+		protected.Get("/refreshToken", handler.RefreshTokenhandler)
 	})
 	return r
 }

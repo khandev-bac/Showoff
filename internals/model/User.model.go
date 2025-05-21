@@ -15,7 +15,5 @@ type User struct {
 	RefreshToken string
 	GoogleID     string `gorm:"index"`
 	IsOauthUser  bool
-	Likes        []Like     `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
-	WishLists    []WishList `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 	CreatedAt    time.Time
 }
