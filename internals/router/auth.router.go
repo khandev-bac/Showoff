@@ -3,6 +3,7 @@ package router
 import (
 	"exceapp/cmd/config"
 	"exceapp/internals/handler"
+	"exceapp/internals/middleware"
 	"exceapp/internals/repo"
 	"exceapp/internals/service"
 	"fmt"
@@ -27,7 +28,11 @@ func Auth() http.Handler {
 	r.Get("/ok", handler.Check)
 	r.Get("/google-login", handler.GoogleLogin)
 	r.Get("/google-callback", handler.GoogleCallback)
-	r.Get("/logout", handler.Logout)
-	r.Get("/user", handler.GetUserInfo)
+
+	r.Group(func(protected chi.Router) {
+		protected.Use(middleware.Auth)
+		protected.Get("/logout", handler.Logout)
+		protected.Get("/user", handler.GetUserInfo)
+	})
 	return r
 }

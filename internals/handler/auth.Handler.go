@@ -130,6 +130,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Name:     "access_token",
 		Value:    tokens.AccessToken,
 		Secure:   true,
+		Path:     "/",
 		HttpOnly: true,
 		Expires:  time.Now().Add(15 * time.Minute),
 		SameSite: http.SameSiteLaxMode,
@@ -138,6 +139,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    tokens.RefreshToken,
+		Path:     "/",
 		Secure:   true,
 		HttpOnly: true,
 		Expires:  time.Now().Add(30 * 24 * time.Hour),
@@ -229,25 +231,39 @@ func (h *UserHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.Context().Value("USERID")
-	if userIDStr == nil {
-		http.Error(w, "Unauthorized", http.StatusInternalServerError)
+	userIDVal := r.Context().Value("USERID")
+	if userIDVal == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	userID, ok := userIDStr.(uuid.UUID)
-	if !ok {
-		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+
+	var userID uuid.UUID
+	switch v := userIDVal.(type) {
+	case uuid.UUID:
+		userID = v
+	case string:
+		parsedID, err := uuid.Parse(v)
+		if err != nil {
+			http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+			return
+		}
+		userID = parsedID
+	default:
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
+
 	user, err := h.service.FindById(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
+
 	if err := h.service.UpdateRefreshToken(r.Context(), user.ID, ""); err != nil {
 		http.Error(w, "Failed to logout user", http.StatusInternalServerError)
 		return
 	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    "",
@@ -257,6 +273,7 @@ func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Unix(0, 0),
 	})
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
@@ -266,31 +283,85 @@ func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Unix(0, 0),
 	})
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Successfully logout completed",
+		"message": "Successfully logged out",
 	})
 }
+
 func (h *UserHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.Context().Value("USERID")
-	if userIDStr == nil {
+	userIDVal := r.Context().Value("USERID")
+	if userIDVal == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	userID, ok := userIDStr.(uuid.UUID)
-	if !ok {
-		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+
+	var userID uuid.UUID
+	switch v := userIDVal.(type) {
+	case uuid.UUID:
+		userID = v
+	case string:
+		parsedID, err := uuid.Parse(v)
+		if err != nil {
+			http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+			return
+		}
+		userID = parsedID
+	default:
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
+
 	user, err := h.service.FindById(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":      user.ID,
 		"name":    user.Name,
 		"email":   user.Email,
 		"profile": user.ProfilePic,
 	})
+}
+func (h *UserHandler) RefreshTokenhandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		http.Error(w, "Refresh token missing", http.StatusUnauthorized)
+		return
+	}
+	refreshToken := cookie.Value
+	claims, err := jwt.ValidateToken(refreshToken)
+	if err != nil {
+		http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
+		return
+	}
+	userIDStr, ok := claims["userID"].(string)
+	if !ok {
+		http.Error(w, "Invalid claims structure", http.StatusUnauthorized)
+		return
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid UUID in token claims", http.StatusUnauthorized)
+		return
+	}
+	token, err := jwt.GenerateJWTToken(userID)
+	if err != nil {
+		http.Error(w, "Could not generate new access token", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    token.RefreshToken,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+		Secure:   true,
+		Path:     "/",
+		Expires:  time.Now().Add(15 * time.Minute),
+	})
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Access token refreshed"))
 }
