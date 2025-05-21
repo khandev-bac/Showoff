@@ -73,3 +73,7 @@ func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 func (s *UserService) GetUsersFeed(ctx context.Context, limit, offset int, excludeUserID uuid.UUID) ([]model.User, error) {
 	return s.repo.FindAllUsers(ctx, limit, offset, excludeUserID)
 }
+func (s *UserService) UpdateUserProfilePic(userID uuid.UUID, url string) error {
+
+	return s.repo.UpdateProfilePic(userID, url)
+}
