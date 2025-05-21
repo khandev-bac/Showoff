@@ -27,5 +27,7 @@ func Auth() http.Handler {
 	r.Get("/ok", handler.Check)
 	r.Get("/google-login", handler.GoogleLogin)
 	r.Get("/google-callback", handler.GoogleCallback)
+	r.Get("/logout", handler.Logout)
+	r.Get("/user", handler.GetUserInfo)
 	return r
 }

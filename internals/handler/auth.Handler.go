@@ -227,3 +227,70 @@ func (h *UserHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+
+func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Context().Value("USERID")
+	if userIDStr == nil {
+		http.Error(w, "Unauthorized", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := userIDStr.(uuid.UUID)
+	if !ok {
+		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		return
+	}
+	user, err := h.service.FindById(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if err := h.service.UpdateRefreshToken(r.Context(), user.ID, ""); err != nil {
+		http.Error(w, "Failed to logout user", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Unix(0, 0),
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Unix(0, 0),
+	})
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Successfully logout completed",
+	})
+}
+func (h *UserHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Context().Value("USERID")
+	if userIDStr == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID, ok := userIDStr.(uuid.UUID)
+	if !ok {
+		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		return
+	}
+	user, err := h.service.FindById(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id":      user.ID,
+		"name":    user.Name,
+		"email":   user.Email,
+		"profile": user.ProfilePic,
+	})
+}
