@@ -29,12 +29,13 @@ func Auth() http.Handler {
 	r.Get("/google-login", handler.GoogleLogin)
 	r.Get("/google-callback", handler.GoogleCallback)
 	r.Get("/refreshToken", handler.RefreshTokenHandler)
-
+	r.Delete("/users/{id}", handler.DeleteUserByID)
 	r.Group(func(protected chi.Router) {
 		protected.Use(middleware.Auth)
 		protected.Get("/logout", handler.Logout)
 		protected.Get("/user", handler.GetUserInfo)
 		protected.Post("/upload-profile", handler.UploadProfilePic)
+		protected.Delete("/delete-user", handler.DeleteUser)
 	})
 	return r
 }
