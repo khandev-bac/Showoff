@@ -347,7 +347,7 @@ func (h *UserHandler) UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	err := r.ParseMultipartForm(10 << 20) // 10MB max
 	if err != nil {
-		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		http.Error(w, "Failed to parse form or more than the limit", http.StatusBadRequest)
 		return
 	}
 
@@ -390,4 +390,49 @@ func (h *UserHandler) UploadProfilePic(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Uploaded profile pic URL: " + url))
+}
+
+func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userIDStr, ok := ctx.Value("USERID").(string)
+	if !ok || userIDStr == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.DeleteUser(ctx, userID); err != nil {
+		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
+		return
+	}
+
+	// Clear cookies
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Unix(0, 0),
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Unix(0, 0),
+	})
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Successfully Deleted User",
+	})
 }
