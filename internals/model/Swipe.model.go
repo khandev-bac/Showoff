@@ -7,12 +7,13 @@ import (
 )
 
 type Swipe struct {
-	ID         uuid.UUID `gorm:"type:uuid;primaryKey"`
-	FromUserID uuid.UUID `gorm:"type:uuid;not null"`
-	FromUser   User      `gorm:"foreignKey:FromUserID;constraint:OnDelete:CASCADE"`
-	ToUserID   uuid.UUID `gorm:"type:uuid;not null"`
-	ToUser     User      `gorm:"foreignKey:FromUserID;constraint:OnDelete:CASCADE"`
-	Direction  string    `gorm:"not null;index"`
-	Emoji      string
-	CreatedAt  time.Time
+	ID uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+
+	SwiperID uuid.UUID `gorm:"type:uuid;not null"`
+	Swiper   User      `gorm:"foreignKey:SwiperID;references:ID;constraint:OnDelete:CASCADE"`
+
+	SwipedID uuid.UUID `gorm:"type:uuid;not null"`
+	Swiped   User      `gorm:"foreignKey:SwipedID;references:ID;constraint:OnDelete:CASCADE"`
+
+	CreatedAt time.Time
 }
