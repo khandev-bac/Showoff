@@ -49,3 +49,6 @@ func (sw *SwipeService) GetSwippedHistory(ctx context.Context, userID uuid.UUID)
 	}
 	return users, nil
 }
+
+
+

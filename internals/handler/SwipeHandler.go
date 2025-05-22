@@ -66,3 +66,22 @@ func (hs *SwipeHandler) SwipeUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Swipe saved"})
 }
+func (hs *SwipeHandler) GetSwippedHistory(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userIDStr := ctx.Value("USERID").(string)
+	if userIDStr == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "user id is not valid", http.StatusUnauthorized)
+		return
+	}
+	users, err := hs.service.GetSwippedHistory(ctx, userID)
+	if err != nil {
+		http.Error(w, "Failed to fetch swipe history", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(users)
+}
