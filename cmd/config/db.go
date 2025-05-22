@@ -63,7 +63,7 @@ func InitDB() {
 	}
 
 	DB = db
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Swipe{}); err != nil {
 		log.Fatal("migration failed")
 	}
 	log.Println("✅ Successfully connected to the database")
