@@ -15,5 +15,6 @@ type Swipe struct {
 	SwipedID uuid.UUID `gorm:"type:uuid;not null"`
 	Swiped   User      `gorm:"foreignKey:SwipedID;references:ID;constraint:OnDelete:CASCADE"`
 
+	Direction string `gorm:"type:varchar(10);not null"` // "right" or "left"
 	CreatedAt time.Time
 }
