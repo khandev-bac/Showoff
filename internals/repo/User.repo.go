@@ -64,6 +64,6 @@ func (r *UserRepo) FindAllUsers(ctx context.Context, limit, offset int, excludeU
 	}
 	return users, nil
 }
-func (r *UserRepo) UpdateProfilePic(userID uuid.UUID, url string) error {
-	return r.db.Model(&model.User{}).Where("id = ?", userID).Update("profile_pic", url).Error
+func (r *UserRepo) UpdateProfilePic(ctx context.Context, userID uuid.UUID, url string) error {
+	return r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("profile_pic", url).Error
 }

@@ -39,7 +39,6 @@ func (s *S3Uploader) UploadFile(file multipart.File, fileSize int64, filename st
 		Bucket: aws.String(s.BucketName),
 		Key:    aws.String(key),
 		Body:   file,
-		ACL:    "public-read",
 	}
 	_, err := s.Uploader.Upload(context.TODO(), upParams)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"exceapp/internals/model"
 	"exceapp/internals/service"
+	"exceapp/pkg"
 	"exceapp/pkg/google"
 	"exceapp/pkg/jwt"
 	"net/http"
@@ -230,39 +231,24 @@ func (h *UserHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	userIDVal := r.Context().Value("USERID")
-	if userIDVal == nil {
+	userIDStr, ok := r.Context().Value("USERID").(string)
+	if !ok || userIDStr == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	var userID uuid.UUID
-	switch v := userIDVal.(type) {
-	case uuid.UUID:
-		userID = v
-	case string:
-		parsedID, err := uuid.Parse(v)
-		if err != nil {
-			http.Error(w, "Invalid user ID format", http.StatusBadRequest)
-			return
-		}
-		userID = parsedID
-	default:
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
-	}
-
-	user, err := h.service.FindById(r.Context(), userID)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.service.UpdateRefreshToken(r.Context(), user.ID, ""); err != nil {
+	if err := h.service.UpdateRefreshToken(r.Context(), userID, ""); err != nil {
 		http.Error(w, "Failed to logout user", http.StatusInternalServerError)
 		return
 	}
 
+	// Clear access and refresh tokens
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    "",
@@ -290,25 +276,15 @@ func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
-	userIDVal := r.Context().Value("USERID")
-	if userIDVal == nil {
+	userIDStr, ok := r.Context().Value("USERID").(string)
+	if !ok || userIDStr == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	var userID uuid.UUID
-	switch v := userIDVal.(type) {
-	case uuid.UUID:
-		userID = v
-	case string:
-		parsedID, err := uuid.Parse(v)
-		if err != nil {
-			http.Error(w, "Invalid user ID format", http.StatusBadRequest)
-			return
-		}
-		userID = parsedID
-	default:
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
 		return
 	}
 
@@ -366,4 +342,52 @@ func (h *UserHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Access token refreshed"))
+}
+func (h *UserHandler) UploadProfilePic(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	err := r.ParseMultipartForm(10 << 20) // 10MB max
+	if err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	file, fileHeader, err := r.FormFile("profile_pic")
+	if err != nil {
+		http.Error(w, "Failed to get file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	uploader, err := pkg.NewUploader("wayz", "ap-south-1")
+	if err != nil {
+		http.Error(w, "S3 initialization failed", http.StatusInternalServerError)
+		return
+	}
+
+	url, err := uploader.UploadFile(file, fileHeader.Size, fileHeader.Filename)
+	if err != nil {
+		http.Error(w, "Upload failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// ✅ Get user ID from context (set by middleware)
+	userIDStr, ok := r.Context().Value("USERID").(string)
+	if !ok || userIDStr == "" {
+		http.Error(w, "Invalid user context", http.StatusUnauthorized)
+		return
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "Id is unable to verify", http.StatusInternalServerError)
+		return
+	}
+	// ✅ Save the URL in DB
+	err = h.service.UpdateUserProfilePic(ctx, userID, url)
+	if err != nil {
+		http.Error(w, "Failed to save profile pic URL", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Uploaded profile pic URL: " + url))
 }

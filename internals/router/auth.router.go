@@ -34,6 +34,7 @@ func Auth() http.Handler {
 		protected.Use(middleware.Auth)
 		protected.Get("/logout", handler.Logout)
 		protected.Get("/user", handler.GetUserInfo)
+		protected.Post("/upload-profile", handler.UploadProfilePic)
 	})
 	return r
 }
